@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIG DNA DOTO APP | 스마트 업무 & 목표 관리 시스템</title>
+    <meta name="description" content="LIG DNA 스마트 업무 및 To-Do 관리 웹 애플리케이션 - 방산 R&D, 업무자동화, 디지털 혁신 과제를 한눈에 추적하는 생산성 플랫폼">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- App Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2224%22>🧬</text></svg>">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Top Navigation Header -->
+        <header class="app-header">
+            <div class="header-container">
+                <div class="brand-group">
+                    <div class="brand-icon-box">
+                        <span class="dna-symbol">🧬</span>
+                    </div>
+                    <div class="brand-text">
+                        <div class="brand-badge">LIG INNOVATION</div>
+                        <h1 class="brand-title">LIG DNA DOTO APP</h1>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <!-- Quick AI Task Preset Generator -->
+                    <button id="btnAiSuggest" class="btn-secondary" title="DNA 업무 시나리오 프리셋 추천" aria-label="DNA 추천 업무 추가">
+                        <span class="btn-icon">💡</span>
+                        <span class="btn-text">AI 업무 추천</span>
+                    </button>
+
+                    <!-- Export Dropdown / Action -->
+                    <div class="dropdown-container">
+                        <button id="btnExportMenu" class="btn-secondary" aria-label="내보내기 메뉴">
+                            <span class="btn-icon">📥</span>
+                            <span class="btn-text">내보내기</span>
+                        </button>
+                        <div id="exportMenu" class="dropdown-menu hidden">
+                            <a href="/api/export?format=csv" class="dropdown-item" download>
+                                <span>📄 CSV (Excel 호환)</span>
+                            </a>
+                            <a href="/api/export?format=json" class="dropdown-item" download="todos.json">
+                                <span>📦 JSON 데이터</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Reset Samples -->
+                    <button id="btnResetSamples" class="btn-secondary" title="기본 샘플 데이터로 복원" aria-label="초기화">
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">샘플 복원</span>
+                    </button>
+
+                    <!-- Theme Toggle -->
+                    <button id="btnThemeToggle" class="btn-icon-only" aria-label="테마 전환" title="다크/라이트 모드 전환">
+                        <span id="themeIcon">☀️</span>
+                    </button>
+
+                    <!-- Add Task Primary Button -->
+                    <button id="btnOpenNewModal" class="btn-primary" aria-label="새 업무 등록">
+                        <span class="btn-icon">➕</span>
+                        <span class="btn-text">새 업무 등록</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-container">
+            <!-- KPI / Stats Overview -->
+            <section class="stats-grid" aria-label="업무 현황 요약">
+                <div class="stat-card" id="kpiTotal">
+                    <div class="stat-icon-wrapper blue">
+                        <span>📋</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">전체 과제</span>
+                        <strong class="stat-value" id="statTotalCount">0</strong>
+                    </div>
+                    <div class="stat-sub">등록된 LIG DNA 업무</div>
+                </div>
+
+                <div class="stat-card" id="kpiInProgress">
+                    <div class="stat-icon-wrapper amber">
+                        <span>⚡</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">진행 중</span>
+                        <strong class="stat-value" id="statInProgressCount">0</strong>
+                    </div>
+                    <div class="stat-sub">현재 수행 및 집중 과제</div>
+                </div>
+
+                <div class="stat-card" id="kpiCompleted">
+                    <div class="stat-icon-wrapper green">
+                        <span>✅</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">완료됨</span>
+                        <strong class="stat-value" id="statCompletedCount">0</strong>
+                    </div>
+                    <div class="stat-sub" id="statCompletionRateText">달성률 0%</div>
+                </div>
+
+                <div class="stat-card" id="kpiDueToday">
+                    <div class="stat-icon-wrapper rose">
+                        <span>⏰</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">마감 임박 / 오늘</span>
+                        <strong class="stat-value" id="statDueTodayCount">0</strong>
+                    </div>
+                    <div class="stat-sub">우선 확인 필요 항목</div>
+                </div>
+            </section>
+
+            <!-- Overall Progress Bar -->
+            <section class="progress-section" aria-label="전체 달성도">
+                <div class="progress-header">
+                    <span class="progress-title">전체 DNA 업무 완수율</span>
+                    <span class="progress-percent" id="progressBarPercent">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressBarFill" style="width: 0%;"></div>
+                </div>
+            </section>
+
+            <!-- Quick Add Bar -->
+            <section class="quick-add-section" aria-label="빠른 등록 바">
+                <form id="quickAddForm" class="quick-add-form">
+                    <div class="quick-input-group">
+                        <span class="quick-icon">✨</span>
+                        <input type="text" id="quickTitleInput" placeholder="새로운 업무/할 일을 빠르게 입력하고 [Enter]를 누르세요..." autocomplete="off" required>
+                    </div>
+                    <div class="quick-meta-group">
+                        <select id="quickCategorySelect" class="quick-select" aria-label="카테고리">
+                            <option value="업무자동화">⚡ 업무자동화</option>
+                            <option value="방위산업/R&D">🛡️ 방위산업/R&D</option>
+                            <option value="디지털혁신">🧬 디지털혁신</option>
+                            <option value="경영기획">📊 경영기획</option>
+                            <option value="일반업무">📝 일반업무</option>
+                        </select>
+                        <select id="quickPrioritySelect" class="quick-select" aria-label="우선순위">
+                            <option value="보통">⚪ 보통</option>
+                            <option value="긴급">🔥 긴급</option>
+                            <option value="높음">🔴 높음</option>
+                            <option value="낮음">🔵 낮음</option>
+                        </select>
+                        <input type="date" id="quickDueDateInput" class="quick-date" aria-label="마감일">
+                        <button type="submit" class="btn-primary btn-quick-submit" id="btnQuickSubmit">
+                            <span>추가</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Control Bar: Search & Filters -->
+            <section class="controls-section" aria-label="업무 필터 및 검색">
+                <!-- Category Filter Tabs -->
+                <div class="category-tabs" id="categoryTabs" role="tablist">
+                    <button class="tab-btn active" data-category="all" role="tab" aria-selected="true">전체보기</button>
+                    <button class="tab-btn" data-category="업무자동화" role="tab" aria-selected="false">⚡ 업무자동화</button>
+                    <button class="tab-btn" data-category="방위산업/R&D" role="tab" aria-selected="false">🛡️ 방위산업/R&D</button>
+                    <button class="tab-btn" data-category="디지털혁신" role="tab" aria-selected="false">🧬 디지털혁신</button>
+                    <button class="tab-btn" data-category="경영기획" role="tab" aria-selected="false">📊 경영기획</button>
+                    <button class="tab-btn" data-category="일반업무" role="tab" aria-selected="false">📝 일반업무</button>
+                </div>
+
+                <!-- Secondary Filters: Status, Priority, Search -->
+                <div class="filters-row">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="업무명 또는 상세 내용 검색..." autocomplete="off">
+                        <button id="btnClearSearch" class="btn-clear hidden" aria-label="검색어 지우기">&times;</button>
+                    </div>
+
+                    <div class="filter-dropdowns">
+                        <div class="filter-select-wrapper">
+                            <label for="statusFilter" class="filter-label">상태:</label>
+                            <select id="statusFilter" class="filter-select">
+                                <option value="all">전체 상태</option>
+                                <option value="pending">대기 중 (To-Do)</option>
+                                <option value="in_progress">진행 중 (In Progress)</option>
+                                <option value="completed">완료 (Done)</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-select-wrapper">
+                            <label for="priorityFilter" class="filter-label">우선순위:</label>
+                            <select id="priorityFilter" class="filter-select">
+                                <option value="all">전체 우선순위</option>
+                                <option value="긴급">🔥 긴급</option>
+                                <option value="높음">🔴 높음</option>
+                                <option value="보통">⚪ 보통</option>
+                                <option value="낮음">🔵 낮음</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Task List Display Section -->
+            <section class="tasks-section" aria-label="업무 목록">
+                <div class="tasks-header">
+                    <div class="tasks-count-info">
+                        <span class="section-title">업무 리스트</span>
+                        <span class="badge-count" id="taskDisplayCount">0개</span>
+                    </div>
+                    <div class="tasks-hint">
+                        💡 <strong>팁:</strong> 체크박스 클릭 시 <em>[대기 ➔ 진행중 ➔ 완료]</em> 순으로 상태가 원클릭 순환됩니다.
+                    </div>
+                </div>
+
+                <!-- Task Cards Container -->
+                <div class="task-list" id="taskListContainer" role="list">
+                    <!-- Dynamic rendering by JS -->
+                </div>
+
+                <!-- Empty State View -->
+                <div class="empty-state hidden" id="emptyStateView">
+                    <div class="empty-icon">📂</div>
+                    <h2 class="empty-title">해당하는 업무가 없습니다</h2>
+                    <p class="empty-desc">조건에 맞는 업무가 없거나 모든 과제를 완수했습니다. 새로운 업무를 등록해보세요!</p>
+                    <button class="btn-secondary" id="btnEmptyResetFilter">필터 초기화</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-container">
+                <p class="footer-text">
+                    <strong>LIG DNA DOTO APP</strong> &copy; 2026 LIG Innovation & Automation. Powered by Python Flask & SQLite.
+                </p>
+                <div class="footer-tags">
+                    <span class="tag">#RPA_자동화</span>
+                    <span class="tag">#Claude_Code</span>
+                    <span class="tag">#방산_혁신DNA</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal: Create / Edit Task -->
+    <div class="modal-backdrop hidden" id="taskModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-icon" id="modalIcon">📝</span>
+                    <h2 class="modal-title" id="modalTitle">새 업무 등록</h2>
+                </div>
+                <button type="button" class="modal-close-btn" id="btnModalClose" aria-label="닫기">&times;</button>
+            </div>
+
+            <form id="taskModalForm" class="modal-form">
+                <input type="hidden" id="modalTaskId">
+
+                <div class="form-group">
+                    <label for="modalTaskTitle" class="form-label">업무 제목 <span class="required">*</span></label>
+                    <input type="text" id="modalTaskTitle" class="form-input" placeholder="실행할 업무 제목을 명확히 입력하세요" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="modalTaskDesc" class="form-label">상세 내용 및 메모</label>
+                    <textarea id="modalTaskDesc" class="form-textarea" rows="4" placeholder="업무의 세부 진행 내용, 참고 링크, 목표치 등을 자유롭게 작성하세요"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="modalTaskCategory" class="form-label">LIG DNA 카테고리</label>
+                        <select id="modalTaskCategory" class="form-select">
+                            <option value="업무자동화">⚡ 업무자동화</option>
+                            <option value="방위산업/R&D">🛡️ 방위산업/R&D</option>
+                            <option value="디지털혁신">🧬 디지털혁신</option>
+                            <option value="경영기획">📊 경영기획</option>
+                            <option value="일반업무">📝 일반업무</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-6">
+                        <label for="modalTaskPriority" class="form-label">우선순위</label>
+                        <select id="modalTaskPriority" class="form-select">
+                            <option value="보통">⚪ 보통</option>
+                            <option value="긴급">🔥 긴급</option>
+                            <option value="높음">🔴 높음</option>
+                            <option value="낮음">🔵 낮음</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="modalTaskStatus" class="form-label">진행 상태</label>
+                        <select id="modalTaskStatus" class="form-select">
+                            <option value="pending">대기 중 (To-Do)</option>
+                            <option value="in_progress">진행 중 (In Progress)</option>
+                            <option value="completed">완료 (Completed)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-6">
+                        <label for="modalTaskDueDate" class="form-label">마감 목표일 (Due Date)</label>
+                        <input type="date" id="modalTaskDueDate" class="form-input">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="btnModalCancel">취소</button>
+                    <button type="submit" class="btn-primary" id="btnModalSubmit">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI Suggestion Modal -->
+    <div class="modal-backdrop hidden" id="aiModalBackdrop" role="dialog" aria-modal="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-icon">💡</span>
+                    <h2 class="modal-title">LIG DNA 스마트 업무 템플릿 추천</h2>
+                </div>
+                <button type="button" class="modal-close-btn" id="btnAiModalClose" aria-label="닫기">&times;</button>
+            </div>
+            <div class="ai-modal-content">
+                <p class="ai-modal-desc">클릭 한 번으로 방산 R&D 및 업무 자동화 실무 추천 과제를 목록에 즉시 추가할 수 있습니다.</p>
+                <div class="ai-template-list" id="aiTemplateList">
+                    <!-- Dynamic template options -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <!-- App Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
