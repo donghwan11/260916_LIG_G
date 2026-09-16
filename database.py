@@ -3,9 +3,14 @@ LIG DNA DOTO APP - Database Layer (SQLite)
 """
 import sqlite3
 import os
+import tempfile
 from datetime import datetime, date
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'todos.db')
+if os.environ.get('VERCEL'):
+    # Vercel 서버리스 환경은 배포 디렉토리가 읽기 전용이라 /tmp에 저장 (인스턴스 재시작 시 초기화됨)
+    DB_PATH = os.path.join(tempfile.gettempdir(), 'todos.db')
+else:
+    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'todos.db')
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
