@@ -16,6 +16,10 @@ database.init_db()
 def index():
     return render_template('index.html')
 
+@app.route('/kpi')
+def kpi_page():
+    return render_template('kpi.html')
+
 @app.route('/api/health')
 def health_check():
     return jsonify({"status": "healthy", "app": "LIG_DNA_DOTO_APP", "version": "1.0.0"})
@@ -145,6 +149,94 @@ def export_todos():
         )
     else:
         return jsonify({"success": True, "data": todos})
+
+@app.route('/api/kpis', methods=['GET'])
+def list_kpis():
+    category = request.args.get('category')
+    search = request.args.get('search')
+
+    kpis = database.get_kpis(category=category, search=search)
+    return jsonify({"success": True, "data": kpis, "count": len(kpis)})
+
+@app.route('/api/kpis/<int:kpi_id>', methods=['GET'])
+def get_kpi(kpi_id):
+    kpi = database.get_kpi_by_id(kpi_id)
+    if not kpi:
+        return jsonify({"success": False, "message": "KPI를 찾을 수 없습니다."}), 404
+    return jsonify({"success": True, "data": kpi})
+
+@app.route('/api/kpis', methods=['POST'])
+def create_kpi():
+    data = request.get_json(silent=True) or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"success": False, "message": "KPI명을 입력해주세요."}), 400
+
+    try:
+        target_value = float(data.get('target_value', 0))
+        actual_value = float(data.get('actual_value', 0))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "목표치/실적치는 숫자로 입력해주세요."}), 400
+
+    description = data.get('description', '').strip()
+    category = data.get('category', '업무자동화')
+    unit = data.get('unit', '건').strip() or '건'
+
+    kpi_id = database.add_kpi(
+        name=name,
+        description=description,
+        category=category,
+        unit=unit,
+        target_value=target_value,
+        actual_value=actual_value
+    )
+    new_kpi = database.get_kpi_by_id(kpi_id)
+    return jsonify({"success": True, "message": "KPI가 등록되었습니다.", "data": new_kpi}), 201
+
+@app.route('/api/kpis/<int:kpi_id>', methods=['PUT'])
+def update_kpi(kpi_id):
+    data = request.get_json(silent=True) or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"success": False, "message": "KPI명을 입력해주세요."}), 400
+
+    try:
+        target_value = float(data.get('target_value', 0))
+        actual_value = float(data.get('actual_value', 0))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "목표치/실적치는 숫자로 입력해주세요."}), 400
+
+    description = data.get('description', '').strip()
+    category = data.get('category', '업무자동화')
+    unit = data.get('unit', '건').strip() or '건'
+
+    updated = database.update_kpi(
+        kpi_id=kpi_id,
+        name=name,
+        description=description,
+        category=category,
+        unit=unit,
+        target_value=target_value,
+        actual_value=actual_value
+    )
+    if not updated:
+        return jsonify({"success": False, "message": "해당 KPI를 찾을 수 없습니다."}), 404
+
+    kpi = database.get_kpi_by_id(kpi_id)
+    return jsonify({"success": True, "message": "KPI가 수정되었습니다.", "data": kpi})
+
+@app.route('/api/kpis/<int:kpi_id>', methods=['DELETE'])
+def delete_kpi(kpi_id):
+    deleted = database.delete_kpi(kpi_id)
+    if not deleted:
+        return jsonify({"success": False, "message": "해당 KPI를 찾을 수 없습니다."}), 404
+
+    return jsonify({"success": True, "message": "KPI가 삭제되었습니다."})
+
+@app.route('/api/kpis/stats', methods=['GET'])
+def kpi_stats():
+    statistics = database.get_kpi_statistics()
+    return jsonify({"success": True, "data": statistics})
 
 if __name__ == '__main__':
     import sys

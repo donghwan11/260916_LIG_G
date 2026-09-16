@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIG DNA KPI 관리 | 목표·실적 달성률 관리 시스템</title>
+    <meta name="description" content="LIG DNA KPI 관리 웹 애플리케이션 - 카테고리별 목표치와 실적치를 등록하고 달성률을 실시간으로 추적합니다.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/kpi.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2224%22>📈</text></svg>">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Top Navigation Header -->
+        <header class="app-header">
+            <div class="header-container">
+                <div class="brand-group">
+                    <div class="brand-icon-box">
+                        <span class="dna-symbol">📈</span>
+                    </div>
+                    <div class="brand-text">
+                        <div class="brand-badge">LIG INNOVATION</div>
+                        <h1 class="brand-title">LIG DNA KPI 관리</h1>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <!-- Page Navigation -->
+                    <a href="/" class="btn-secondary" title="업무 관리 페이지로 이동" aria-label="업무 관리">
+                        <span class="btn-icon">🗂️</span>
+                        <span class="btn-text">업무 관리</span>
+                    </a>
+
+                    <!-- Theme Toggle -->
+                    <button id="btnThemeToggle" class="btn-icon-only" aria-label="테마 전환" title="다크/라이트 모드 전환">
+                        <span id="themeIcon">☀️</span>
+                    </button>
+
+                    <!-- Add KPI Primary Button -->
+                    <button id="btnOpenNewModal" class="btn-primary" aria-label="새 KPI 등록">
+                        <span class="btn-icon">➕</span>
+                        <span class="btn-text">새 KPI 등록</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-container">
+            <!-- KPI Overview Stats -->
+            <section class="stats-grid" aria-label="KPI 현황 요약">
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper blue">
+                        <span>📊</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">전체 KPI</span>
+                        <strong class="stat-value" id="statTotalCount">0</strong>
+                    </div>
+                    <div class="stat-sub">등록된 지표 수</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper green">
+                        <span>🎯</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">목표 달성</span>
+                        <strong class="stat-value" id="statAchievedCount">0</strong>
+                    </div>
+                    <div class="stat-sub">달성률 100% 이상</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper amber">
+                        <span>⚡</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">순항 중</span>
+                        <strong class="stat-value" id="statOnTrackCount">0</strong>
+                    </div>
+                    <div class="stat-sub">달성률 70~99%</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper rose">
+                        <span>⚠️</span>
+                    </div>
+                    <div class="stat-details">
+                        <span class="stat-label">위험 지표</span>
+                        <strong class="stat-value" id="statAtRiskCount">0</strong>
+                    </div>
+                    <div class="stat-sub">달성률 70% 미만</div>
+                </div>
+            </section>
+
+            <!-- Overall Average Achievement -->
+            <section class="progress-section" aria-label="평균 달성률">
+                <div class="progress-header">
+                    <span class="progress-title">전체 KPI 평균 달성률</span>
+                    <span class="progress-percent" id="progressBarPercent">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressBarFill" style="width: 0%;"></div>
+                </div>
+            </section>
+
+            <!-- Control Bar: Search & Filters -->
+            <section class="controls-section" aria-label="KPI 필터 및 검색">
+                <!-- Category Filter Tabs -->
+                <div class="category-tabs" id="categoryTabs" role="tablist">
+                    <button class="tab-btn active" data-category="all" role="tab" aria-selected="true">전체보기</button>
+                    <button class="tab-btn" data-category="업무자동화" role="tab" aria-selected="false">⚡ 업무자동화</button>
+                    <button class="tab-btn" data-category="방위산업/R&D" role="tab" aria-selected="false">🛡️ 방위산업/R&D</button>
+                    <button class="tab-btn" data-category="디지털혁신" role="tab" aria-selected="false">🧬 디지털혁신</button>
+                    <button class="tab-btn" data-category="경영기획" role="tab" aria-selected="false">📊 경영기획</button>
+                    <button class="tab-btn" data-category="일반업무" role="tab" aria-selected="false">📝 일반업무</button>
+                </div>
+
+                <div class="filters-row">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="KPI명 또는 설명 검색..." autocomplete="off">
+                        <button id="btnClearSearch" class="btn-clear hidden" aria-label="검색어 지우기">&times;</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KPI List Display Section -->
+            <section class="tasks-section" aria-label="KPI 목록">
+                <div class="tasks-header">
+                    <div class="tasks-count-info">
+                        <span class="section-title">KPI 리스트</span>
+                        <span class="badge-count" id="kpiDisplayCount">0개</span>
+                    </div>
+                    <div class="tasks-hint">
+                        💡 <strong>팁:</strong> 실적치를 갱신하면 달성률이 자동으로 계산됩니다.
+                    </div>
+                </div>
+
+                <!-- KPI Cards Container -->
+                <div class="kpi-list" id="kpiListContainer" role="list">
+                    <!-- Dynamic rendering by JS -->
+                </div>
+
+                <!-- Empty State View -->
+                <div class="empty-state hidden" id="emptyStateView">
+                    <div class="empty-icon">📂</div>
+                    <h2 class="empty-title">등록된 KPI가 없습니다</h2>
+                    <p class="empty-desc">조건에 맞는 KPI가 없습니다. 새로운 KPI를 등록해보세요!</p>
+                    <button class="btn-secondary" id="btnEmptyResetFilter">필터 초기화</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-container">
+                <p class="footer-text">
+                    <strong>LIG DNA KPI 관리</strong> &copy; 2026 LIG Innovation & Automation. Powered by Python Flask & Supabase.
+                </p>
+                <div class="footer-tags">
+                    <span class="tag">#KPI_관리</span>
+                    <span class="tag">#Claude_Code</span>
+                    <span class="tag">#방산_혁신DNA</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal: Create / Edit KPI -->
+    <div class="modal-backdrop hidden" id="kpiModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-icon" id="modalIcon">📈</span>
+                    <h2 class="modal-title" id="modalTitle">새 KPI 등록</h2>
+                </div>
+                <button type="button" class="modal-close-btn" id="btnModalClose" aria-label="닫기">&times;</button>
+            </div>
+
+            <form id="kpiModalForm" class="modal-form">
+                <input type="hidden" id="modalKpiId">
+
+                <div class="form-group">
+                    <label for="modalKpiName" class="form-label">KPI명 <span class="required">*</span></label>
+                    <input type="text" id="modalKpiName" class="form-input" placeholder="관리할 KPI 지표명을 입력하세요" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="modalKpiDesc" class="form-label">설명 및 메모</label>
+                    <textarea id="modalKpiDesc" class="form-textarea" rows="3" placeholder="지표의 정의, 산출 기준 등을 자유롭게 작성하세요"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="modalKpiCategory" class="form-label">LIG DNA 카테고리</label>
+                        <select id="modalKpiCategory" class="form-select">
+                            <option value="업무자동화">⚡ 업무자동화</option>
+                            <option value="방위산업/R&D">🛡️ 방위산업/R&D</option>
+                            <option value="디지털혁신">🧬 디지털혁신</option>
+                            <option value="경영기획">📊 경영기획</option>
+                            <option value="일반업무">📝 일반업무</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-6">
+                        <label for="modalKpiUnit" class="form-label">단위</label>
+                        <input type="text" id="modalKpiUnit" class="form-input" placeholder="예: 건, %, 원, 명" value="건">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="modalKpiTarget" class="form-label">목표치 <span class="required">*</span></label>
+                        <input type="number" id="modalKpiTarget" class="form-input" step="any" placeholder="0" required>
+                    </div>
+
+                    <div class="form-group col-6">
+                        <label for="modalKpiActual" class="form-label">실적치</label>
+                        <input type="number" id="modalKpiActual" class="form-input" step="any" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="btnModalCancel">취소</button>
+                    <button type="submit" class="btn-primary" id="btnModalSubmit">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <!-- App Script -->
+    <script src="/static/js/kpi.js"></script>
+</body>
+</html>

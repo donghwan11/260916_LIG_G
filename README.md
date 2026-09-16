@@ -39,6 +39,11 @@ Python Flask와 SQLite로 구축된 빠르고 세련된 고성능 웹 애플리�
 7. **🌙 다크 모드 / 라이트 모드 지원**
    - 사용자 환경설정 로컬스토리지 자동 저장
 
+8. **📈 KPI 관리 툴 (`/kpi`)**
+   - LIG DNA 카테고리별 KPI 등록 (목표치/실적치/단위)
+   - 실적치 입력 시 달성률(%) 자동 계산 및 달성/순항/위험 상태 자동 분류
+   - 전체 KPI 평균 달성률 및 상태별 집계 대시보드
+
 ---
 
 ## 🚀 실행 방법
@@ -68,12 +73,15 @@ LIG_DNA_DOTO_APP/
 ├── run.bat             # 원클릭 실행 스크립트
 ├── README.md           # 설명 문서
 ├── templates/
-│   └── index.html      # 시맨틱 반응형 메인 UI 템플릿
+│   ├── index.html      # 시맨틱 반응형 메인 UI 템플릿 (업무 관리)
+│   └── kpi.html        # KPI 관리 페이지 템플릿
 └── static/
     ├── css/
-    │   └── style.css   # 글래스모피즘 & 모던 테크 디자인 시스템
+    │   ├── style.css   # 글래스모피즘 & 모던 테크 디자인 시스템
+    │   └── kpi.css     # KPI 카드 & 진행률 바 스타일
     └── js/
-        └── app.js      # 비동기 통신 및 반응형 인터랙션 로직
+        ├── app.js      # 비동기 통신 및 반응형 인터랙션 로직 (업무 관리)
+        └── kpi.js      # KPI CRUD 및 대시보드 로직
 ```
 
 ---
@@ -91,3 +99,10 @@ LIG_DNA_DOTO_APP/
 | `GET` | `/api/stats` | 대시보드 통계 요약 (완수율, 카테고리별 집계 등) |
 | `POST` | `/api/reset` | LIG DNA 샘플 데이터로 복원 |
 | `GET` | `/api/export` | CSV / JSON 데이터 다운로드 |
+| `GET` | `/kpi` | KPI 관리 페이지 |
+| `GET` | `/api/kpis` | KPI 목록 조회 (카테고리, 검색어 필터 지원) |
+| `POST` | `/api/kpis` | 새 KPI 등록 |
+| `GET` | `/api/kpis/<id>` | 특정 KPI 상세 조회 |
+| `PUT` | `/api/kpis/<id>` | KPI 목표치/실적치 등 수정 |
+| `DELETE`| `/api/kpis/<id>` | KPI 삭제 |
+| `GET` | `/api/kpis/stats` | KPI 대시보드 통계 (평균 달성률, 상태별 집계) |
