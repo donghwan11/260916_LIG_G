@@ -1,29 +1,25 @@
 """
-LIG DNA DOTO APP - Database Layer (SQLite)
+LIG DNA DOTO APP - Database Layer (PostgreSQL / Supabase)
 """
-import sqlite3
 import os
-import tempfile
 from datetime import datetime, date
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-if os.environ.get('VERCEL'):
-    # Vercel 서버리스 환경은 배포 디렉토리가 읽기 전용이라 /tmp에 저장 (인스턴스 재시작 시 초기화됨)
-    DB_PATH = os.path.join(tempfile.gettempdir(), 'todos.db')
-else:
-    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'todos.db')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH, timeout=10.0)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
 def init_db():
     """데이터베이스 테이블 생성 및 초기 샘플 데이터 적재"""
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS todos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT DEFAULT '',
                 category TEXT NOT NULL DEFAULT '업무자동화',
@@ -37,11 +33,13 @@ def init_db():
         conn.commit()
 
         # 데이터가 없을 경우 LIG DNA 실무 맞춤형 샘플 데이터 자동 생성
-        cursor.execute("SELECT COUNT(*) FROM todos")
-        count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) AS cnt FROM todos")
+        count = cursor.fetchone()['cnt']
         if count == 0:
             insert_sample_data(cursor)
             conn.commit()
+    finally:
+        conn.close()
 
 def insert_sample_data(cursor):
     today = date.today().strftime('%Y-%m-%d')
@@ -99,7 +97,7 @@ def insert_sample_data(cursor):
     ]
     cursor.executemany("""
         INSERT INTO todos (title, description, category, priority, status, due_date, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """, samples)
 
 def get_todos(category=None, status=None, priority=None, search=None):
@@ -107,75 +105,90 @@ def get_todos(category=None, status=None, priority=None, search=None):
     params = []
 
     if category and category != 'all':
-        query += " AND category = ?"
+        query += " AND category = %s"
         params.append(category)
 
     if status and status != 'all':
-        query += " AND status = ?"
+        query += " AND status = %s"
         params.append(status)
 
     if priority and priority != 'all':
-        query += " AND priority = ?"
+        query += " AND priority = %s"
         params.append(priority)
 
     if search:
-        query += " AND (title LIKE ? OR description LIKE ?)"
+        query += " AND (title LIKE %s OR description LIKE %s)"
         term = f"%{search}%"
         params.extend([term, term])
 
     # 정렬: 긴급/높음/보통/낮음 순 및 마감일 순, 최신순
     query += """
-        ORDER BY 
+        ORDER BY
             CASE status WHEN 'in_progress' THEN 1 WHEN 'pending' THEN 2 ELSE 3 END,
             CASE priority WHEN '긴급' THEN 1 WHEN '높음' THEN 2 WHEN '보통' THEN 3 ELSE 4 END,
             due_date ASC,
             id DESC
     """
 
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
         cursor.execute(query, params)
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
+    finally:
+        conn.close()
 
 def get_todo_by_id(todo_id):
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+        cursor.execute("SELECT * FROM todos WHERE id = %s", (todo_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
+    finally:
+        conn.close()
 
 def add_todo(title, description="", category="업무자동화", priority="보통", status="pending", due_date=None):
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     if not due_date:
         due_date = date.today().strftime('%Y-%m-%d')
 
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO todos (title, description, category, priority, status, due_date, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         """, (title, description, category, priority, status, due_date, now, now))
+        new_id = cursor.fetchone()['id']
         conn.commit()
-        return cursor.lastrowid
+        return new_id
+    finally:
+        conn.close()
 
 def update_todo(todo_id, title, description, category, priority, status, due_date):
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE todos 
-            SET title = ?, description = ?, category = ?, priority = ?, status = ?, due_date = ?, updated_at = ?
-            WHERE id = ?
+            UPDATE todos
+            SET title = %s, description = %s, category = %s, priority = %s, status = %s, due_date = %s, updated_at = %s
+            WHERE id = %s
         """, (title, description, category, priority, status, due_date, now, todo_id))
         conn.commit()
         return cursor.rowcount > 0
+    finally:
+        conn.close()
 
 def toggle_todo_status(todo_id):
     """상태 순환: pending -> in_progress -> completed -> pending"""
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status FROM todos WHERE id = ?", (todo_id,))
+        cursor.execute("SELECT status FROM todos WHERE id = %s", (todo_id,))
         row = cursor.fetchone()
         if not row:
             return None
@@ -184,35 +197,41 @@ def toggle_todo_status(todo_id):
         next_status = 'in_progress' if current == 'pending' else ('completed' if current == 'in_progress' else 'pending')
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        cursor.execute("UPDATE todos SET status = ?, updated_at = ? WHERE id = ?", (next_status, now, todo_id))
+        cursor.execute("UPDATE todos SET status = %s, updated_at = %s WHERE id = %s", (next_status, now, todo_id))
         conn.commit()
         return next_status
+    finally:
+        conn.close()
 
 def delete_todo(todo_id):
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+        cursor.execute("DELETE FROM todos WHERE id = %s", (todo_id,))
         conn.commit()
         return cursor.rowcount > 0
+    finally:
+        conn.close()
 
 def get_statistics():
     today = date.today().strftime('%Y-%m-%d')
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM todos")
-        total = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) AS cnt FROM todos")
+        total = cursor.fetchone()['cnt']
 
-        cursor.execute("SELECT COUNT(*) FROM todos WHERE status = 'completed'")
-        completed = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) AS cnt FROM todos WHERE status = 'completed'")
+        completed = cursor.fetchone()['cnt']
 
-        cursor.execute("SELECT COUNT(*) FROM todos WHERE status = 'in_progress'")
-        in_progress = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) AS cnt FROM todos WHERE status = 'in_progress'")
+        in_progress = cursor.fetchone()['cnt']
 
-        cursor.execute("SELECT COUNT(*) FROM todos WHERE status = 'pending'")
-        pending = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) AS cnt FROM todos WHERE status = 'pending'")
+        pending = cursor.fetchone()['cnt']
 
-        cursor.execute("SELECT COUNT(*) FROM todos WHERE due_date <= ? AND status != 'completed'", (today,))
-        due_today_or_overdue = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) AS cnt FROM todos WHERE due_date <= %s AND status != 'completed'", (today,))
+        due_today_or_overdue = cursor.fetchone()['cnt']
 
         cursor.execute("SELECT category, COUNT(*) as cnt FROM todos GROUP BY category")
         categories = {row['category']: row['cnt'] for row in cursor.fetchall()}
@@ -228,10 +247,15 @@ def get_statistics():
             "completion_rate": completion_rate,
             "categories": categories
         }
+    finally:
+        conn.close()
 
 def reset_to_samples():
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM todos")
         insert_sample_data(cursor)
         conn.commit()
+    finally:
+        conn.close()
